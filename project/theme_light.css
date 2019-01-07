@@ -1,0 +1,44 @@
+/* global CSS settings for light theme */
+
+/* header layout (header itself, head navigation) */
+
+header {
+    background: #c5d2a7;
+}
+
+/* page content - similar to body but used to make sure it all works (also in case of some changes to page...) */
+
+#page_content {
+    background: white;
+
+}
+
+/* main page - where articles and menu are held */
+#main_page {
+    background: white;
+}
+
+
+
+#main_menu {
+    background: #e0ead7;
+}
+
+
+footer {
+    background: #adbcb1;
+}
+
+a:hover {
+    color: #528970;
+}
+
+.category {
+    background: #d5e7d9;
+}
+.category:hover{
+    background: #878787;
+}
+.category a:hover {
+    color: white;
+}

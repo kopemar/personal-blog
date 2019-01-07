@@ -1,0 +1,318 @@
+/* global CSS settings */
+
+/* the button to get back to TOP of the page */
+.back_to_top {
+    position: fixed;
+    right: 72px;
+    bottom: 42px;
+    display: none;
+}
+
+body {
+    margin: 0;
+}
+
+/* header -- horní menu (jak nadpis, tak navigace) */
+
+header {
+    display: flex;
+}
+
+
+header h1 a {
+    text-decoration: none;
+}
+
+a {
+    color: inherit;
+    transition-duration: 0.4s;
+}
+
+a:hover {
+    transition-duration: 0.4s;
+}
+
+#head_menu {
+    display: flex;
+    flex-direction: row;
+}
+
+.head_menu_item {
+    margin: auto 1%;
+    width: auto;
+}
+
+/* page content - podobně jako body ...) */
+
+#page_content {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* main - kde se zobrazují články */
+main {
+    padding: 10px;
+    flex-grow: 1;
+}
+
+hr {
+    opacity: 0.3;
+}
+
+.category {
+    display: inline-block;
+    padding: 3px;
+    transition-duration: 0.4s;
+}
+.category:hover{
+    transition-duration: 0.4s;
+}
+.category a {
+    padding: 12px;
+    text-decoration: -moz-none;
+    text-decoration: none;
+}
+
+.comment {
+
+    padding: 3px;
+}
+
+#pages {
+    display: flex;
+    flex-direction: row;
+    text-align: center;
+}
+
+#older, #newer {
+}
+
+#page_number {
+    flex-grow: 1;
+}
+
+#main_menu {
+    padding: 10px;
+}
+
+.menu_label {
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 1px;
+    margin: 10px;
+    font-family: "DejaVu Sans", sans-serif;
+    text-align: center;
+    text-decoration: underline ;
+    display: block;
+
+}
+
+
+#login input {
+
+    height: 1.2em;
+}
+
+#login input[type="submit"] {
+    width: auto;
+    margin: auto;
+}
+
+footer {
+    bottom: 0;
+    text-align: center;
+}
+
+form #register {
+    width: 100vw;
+}
+form {
+    width: 100%;
+}
+
+.error_message {
+    border: #ff3761 solid 2px;
+    padding: 2px;
+    width: -moz-fit-content;
+    width: fit-content;
+    background: #bd767e;
+}
+
+#edit {
+    width: 100%;
+}
+#edit_article_text{
+    min-width: 80%;
+    max-width:85%;
+    min-height: 30vh;
+    max-height: 70vh
+}
+.category {
+    padding: 1px;
+}
+
+#new_comment {
+    width: 100%;
+}
+#new_comment textarea {
+    min-width: 60%;
+    max-width: 60%;
+    min-height:15vh;
+    max-height: 40vh;
+
+}
+
+.comment_author {
+    font-weight: bold;
+}
+/*p {
+    font-size: 120%;
+}*/
+
+
+/* normal screen */
+@media screen and (min-width: 1000px){
+    header {
+        padding: 40px 60px;
+        transition: 0.4s;
+        border-bottom: #C2C0C0 2px solid;
+        flex-direction: row;
+        position: sticky;
+        top: 0;
+        -webkit-transform: translate3d(0,0,0);
+        z-index: 2;
+    }
+
+    .scroll {
+        padding: 5px 60px;
+    }
+
+    .top_display {
+        display: block;
+    }
+
+    header h1 {
+        flex-grow: 1;
+        font-family: Georgia, serif;
+        text-align: left;
+    }
+
+    #page_content {
+        position: absolute;
+        min-height: 100vh;
+    }
+
+    /* main_page -- část se stránkou + postranním menu */
+    #main_page {
+        border-right: #C2C0C0 2px solid;
+        border-left: #C2C0C0 2px solid;
+        display: flex;
+        flex-direction: row-reverse;
+        flex-grow: 1;
+        margin: 0 60px;
+    }
+
+    #older, #newer {
+        width: 150px;
+    }
+
+    #main_menu {
+        min-width: 220px;
+        max-width: 220px    ;
+        border-right: #C2C0C0 2px solid;
+    }
+
+
+    .menu_category {
+        width: 100%;
+    }
+
+    #login, #theme_opt {
+        width: 100%;
+
+    }
+
+    #login input {
+
+        width: 90%;
+        font-size: 1em;
+        height: 1.5em;
+    }
+
+    #login input[type="submit"] {
+        width: auto;
+        margin: auto;
+        height: auto;
+    }
+
+}
+
+/* styl pro tisk -- mizí menu, text je černý */
+
+@media print {
+    * {
+        background: white;
+        color: black;
+    }
+    header {
+        margin: 0;
+    }
+    #head_menu {
+        display: none;
+    }
+
+    #main_menu {
+        display: none;
+    }
+    #pages {
+        display: none;
+    }
+    #back_to_top {
+        display: none;
+    }
+    #perpage {
+        display: none;
+    }
+}
+
+/* CSS pro malé obrazovky -- ideálně mobilní telefony -- mění se rozložení, menu se přesouvá pod obsah */
+@media screen and (max-width: 1000px) {
+
+    header {
+        height:auto;
+        width: auto;
+        flex-direction: column;
+        border-bottom: aliceblue 1px solid;
+        padding: 10px;
+    }
+
+    header h1 {
+        text-align: center;
+        font-family: Georgia, serif;
+    }
+
+    #head_menu {
+        margin: auto;
+    }
+
+
+    .head_menu_item a {
+        text-decoration: none;
+    }
+
+    #page_content {
+        width: 100%;
+    }
+
+    #login input {
+        width: 100%;
+    }
+
+    #login input[type="submit"] {
+        width: auto;
+        margin: auto;
+        height: auto;
+    }
+}

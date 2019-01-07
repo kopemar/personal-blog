@@ -1,0 +1,45 @@
+/* global CSS settings for dark theme */
+
+body {
+    color: #ffffff;
+    background: #222322;
+}
+/* header layout (header itself, head navigation) */
+
+header {
+    background: #861b25;
+    display: flex;
+}
+
+/* main page - where articles and menu are held */
+#main_page {
+    background: #000000;
+}
+
+#main_menu {
+    padding: 10px;
+    background: #222322;
+}
+
+.menu_label {
+    color: #878787;
+
+}
+
+footer {
+    background: #4b0b16;
+}
+
+a:hover {
+    color: #b26265;
+}
+
+.category {
+    background: #49464a;
+}
+.category:hover{
+    background: #874a64;
+}
+.category a:hover {
+    color: white;
+}
