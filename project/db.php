@@ -68,7 +68,7 @@ class UserDatabase extends Database {
      * @return mixed
      * Vrátí hash pro uživatele (validace, zda existuje, probíhá jinde!)
      */
-    private function getPasswordHash ($user) {
+    public function getPasswordHash ($user) {
         $query = "SELECT password, BIN(`admin` + 0) AS `admin` FROM `users` WHERE username='$user'";
         $result = mysqli_query($this->getLink(), $query);
         $hash = mysqli_fetch_row($result)[0];
@@ -108,8 +108,11 @@ class UserDatabase extends Database {
             $hash = $this->getPasswordHash($username);
             if (password_verify($password, $hash)) {
                 startUserSession($username, $this->isAdmin($username));
+                $location = $_SERVER["PHP_SELF"];
+                header("Location: $location");
             }
         }
+        return;
     }
 
     /**
@@ -183,7 +186,6 @@ $db = new UserDatabase();
 $location = $_SERVER["PHP_SELF"];
 
 if (isset($_POST["username"])&&isset($_POST["password"])&&!isset($_SESSION["signed"])) {
-    header("Location: $location");
     $db->signIn($_POST["username"], $_POST["password"]);
 }
 
@@ -215,6 +217,7 @@ class ArticleDatabase extends Database {
      * Vkládání článků do db.
      */
     public function insertArticle ($title, $author, $contents) {
+        $currentTime = date("Y-m-d", time());
         $query = "INSERT INTO articles (title, author, contents) VALUE ('$title', '$author', '$contents')";
         mysqli_query($this->getLink(), $query);
         mysqli_close($this->getLink());
@@ -273,6 +276,7 @@ class ArticleDatabase extends Database {
         mysqli_close($this->getLink());
         return $article;
     }
+    return null;
     }
 
     /**
@@ -518,6 +522,14 @@ function textValid($text) {
 
 $articles = new ArticleDatabase();
 
+function categoriesLengthCheck ($array) {
+    foreach ($array as $value) {
+        if (strlen($value) > 100) {
+            return false;
+        }
+    }
+    return true;
+}
 
 /**
  * @param $article
@@ -528,14 +540,17 @@ $articles = new ArticleDatabase();
  * 4. Zkontrolovat, zda neexistuje nějaká kategorie bez vazby a případně ji smazat z categories.
  *
  */
+
 function checkSubmittedArticleCategories ($article) {
     $articles = new ArticleDatabase();
     while (in_array("", $_POST["category"])) {
         $key = array_search("", $_POST["category"]);
         unset($_POST["category"][$key]);
     }
+    if (categoriesLengthCheck($_POST["category"])) {
     $articles->resetArticleRelations($article);
     foreach ($_POST["category"] as $category) {
+
         if (!$articles->categoryExists($category)) {
             $articles->createCategory(mysqli_real_escape_string($articles->getLink(), $category));
         }
@@ -546,6 +561,7 @@ function checkSubmittedArticleCategories ($article) {
             }
     }
     }
+    }
 }
 
 /**
@@ -553,14 +569,16 @@ function checkSubmittedArticleCategories ($article) {
 */
 if (isset($_POST["submit_article"])) {
     if (isset($_SESSION["admin"]) && $_SESSION["admin"]) {
-        if (isset($_SESSION["user"]) && titleValid($_POST["edit_article_title"] && textValid($_POST["edit_article_text"]))) {
+        if (isset($_SESSION["user"]) && titleValid($_POST["edit_article_title"] && textValid($_POST["edit_article_text"])) && categoriesLengthCheck($_POST["category"])) {
             header("Location: $location");
             if (isset($_POST["a"]) && $articles->articleExists($_POST["a"])) {
-                $articles->updateArticle($_POST["a"], mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_title"]), mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_text"]));
-                checkSubmittedArticleCategories($_POST["a"]);
+                    checkSubmittedArticleCategories($_POST["a"]);
+                    $articles->updateArticle($_POST["a"], mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_title"]), mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_text"]));
             } else {
                 $articles->insertArticle(mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_title"]), mysqli_real_escape_string($articles->getLink(), $_SESSION["user"]), mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_text"]));
+                if (!checkSubmittedArticleCategories($articles->getLatestArticleId())) {
                 checkSubmittedArticleCategories($articles->getLatestArticleId());
+                }
             }
         }
     }

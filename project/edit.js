@@ -1,11 +1,9 @@
 
 /*
- * Validace formuk
+ * Validace formuláře
  */
 
 var values = [];
-var title = document.querySelector("#edit_article_title");
-var text = document.querySelector("#edit_article_text");
 var submitArticle = document.querySelector("#edit");
 var addNewField = document.querySelector("#another_category");
 var fields = document.querySelectorAll(".new_category_field");
@@ -27,6 +25,16 @@ addNewField.addEventListener("click", function () {
 );
 
 submitArticle.addEventListener("submit", function (event) {
+    var title = document.querySelector("#edit_article_title");
+    var text = document.querySelector("#edit_article_text");
+    var categories = document.querySelectorAll(".new_category_field");
+    for (var i = 0; i < categories.length; i++) {
+        if (categories[i].value.length > 100) {
+            alert((i+1)+". kategorie má moc dlouhý název");
+            event.preventDefault();
+            return;
+        }
+    }
     if (title.value.length === 0) {
         alert("Vyplňte prosím titulek");
         event.preventDefault();

@@ -69,7 +69,7 @@ foreach ($a as $value) {
 <section>
     <h2><a href="index.php?p=<?php echo urlencode($value["id"]) ?>"><?php echo htmlspecialchars($value["title"], ENT_QUOTES); ?></a></h2>
     <div class="info">
-        Zveřejněno dne <span><?php echo $value["timestamp"]; ?></span> uživatelem <span><a href="<?php echo $_SERVER['PHP_SELF']."?author=".urlencode(htmlspecialchars($value["author"], ENT_QUOTES));?>">
+        Naposledy změněno dne <span><?php echo $value["timestamp"]; ?></span> uživatelem <span><a href="<?php echo $_SERVER['PHP_SELF']."?author=".urlencode(htmlspecialchars($value["author"], ENT_QUOTES));?>">
                 <?php echo htmlspecialchars($value["author"], ENT_QUOTES); ?></a></span>
     </div>
     <p> <?php echo nl2br(htmlspecialchars($value["contents"]))?> </p>

@@ -41,7 +41,10 @@ function getTitle() {
             $title = "Editace článku";
         }
         else if ($_GET["p"] == "about") {
-            $title = "O mn2";
+            $title = "O mně";
+        }
+        else if ($_GET["p"] == "gallery") {
+            $title = "O mojí galerii";
         }
         else {
             $articles = new ArticleDatabase();

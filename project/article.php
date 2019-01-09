@@ -16,13 +16,14 @@
     if (isset($_SESSION["admin"])&&$_SESSION["admin"]) { ?>
         <form action="<?php echo $location; ?>" method="post">
             <input type="hidden" name="a" value="<?php if (isset($_GET["p"])) {echo $_GET["p"];} ?>">
+            <input type="hidden" name="timestamp" value="<?php echo $value["timestamp"]?>">
             <button type="submit" name="delete">Smazat</button>
             <button type="submit" name="edit">Upravit</button>
         </form>
         <br>
     <?php } ?>
     <div id="info">
-        Zveřejněno dne <span id="date"><?php echo $value["timestamp"]; ?></span> uživatelem <span>
+        Naposledy změněno dne <span id="date"><?php echo $value["timestamp"]; ?></span> uživatelem <span>
             <a href="<?php echo $_SERVER['PHP_SELF']."?author=".urlencode(htmlspecialchars($value["author"], ENT_QUOTES));?>"><?php echo htmlspecialchars($value["author"], ENT_QUOTES); ?></a></span>
     </div>
     <div id="text">

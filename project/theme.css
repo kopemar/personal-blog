@@ -49,12 +49,14 @@ a:hover {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    word-break: break-all;
 }
 
 /* main - kde se zobrazují články */
 main {
     padding: 10px;
     flex-grow: 1;
+
 }
 
 hr {
@@ -219,8 +221,8 @@ form {
     }
 
     #main_menu {
-        min-width: 220px;
-        max-width: 220px    ;
+        min-width: 230px;
+        max-width: 230px;
         border-right: #C2C0C0 2px solid;
     }
 

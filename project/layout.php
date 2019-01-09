@@ -99,7 +99,7 @@ $theme = "theme_light";
             <br>
             <input type="submit" name="login" id="login_btn" value="Log in">
         </form>
-        <?php if (isset($_POST["username"])&& isset($_POST["password"])) {if (!$users->userExists($_POST["username"])||!password_verify($_POST["password"], logInVerificationUsername($_POST["username"])["password"])) {?>
+        <?php if (isset($_POST["username"])&&isset($_POST["password"])) {if (!$users->userExists($_POST["username"])||!password_verify($_POST["password"], $users->getPasswordHash($_POST["username"]))) { ?>
             <div class="error_message">Zadané uživatelské jméno neexistuje nebo jste zadali špatné heslo.</div>
         <?php } }?>
         <a href="index.php?p=register">Zaregistrovat se</a>
