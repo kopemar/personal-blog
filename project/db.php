@@ -2,106 +2,87 @@
 
 /**
  * Class Database
- * Společná třída - zajišťuje spojení s databází.
+ * Constructs connection to DB (via PDO).
  */
 class Database
 {
-    private const SERVERNAME = "localhost";
-    private const USERNAME = "xxxx";
-    private const PASSWORD = "xxxx";
 
-    /**
-     * Database constructor.
-     */
+    protected $link;
+
     public function __construct() {
-        $link = $this->getLink();
-        if (!$link) {
-            die("Connection failed: " . mysqli_connect_error());
+        try {
+            $this->link = new PDO("mysql:host=xx; dbname=xx", "xx", "xx");
         }
-    }
-
-    /**
-     * @return mysqli
-     */
-    public function getLink()
-    {
-        $link = new mysqli(self::SERVERNAME, self::USERNAME, self::PASSWORD, self::USERNAME);
-        return $link;
+        catch (PDOException $e) {
+            print "Error!: " . $e->getMessage() . "<br/>";
+            die();
+        }
     }
 }
 
 /**
  * Class UserDatabase
- * Třída s metodami pro obsluhu databáze uživatelů
  */
 class UserDatabase extends Database {
     /**
      * @param $user
      * @return bool
-     * Jestliže již uživatel existuje (tj. záznam s daným username má alespoň/právě jeden řádek), vrátí PRAVDA, jinak NEPRAVDA.
      */
     public function userExists($user) {
-        $query = "SELECT *, BIN(`admin` + 0) AS `admin` FROM `users` WHERE username='$user'";
-        $result = mysqli_query($this->getLink(), $query);
-        if (mysqli_num_rows($result) != 0) {
-            mysqli_free_result($result);
-            mysqli_close($this->getLink());
+        $query = $this->link->prepare("SELECT *, BIN(`admin` + 0) AS `admin` FROM `users` WHERE username=:user");
+        $query->bindParam(":user", $user);
+        $query->execute();
+        if ($query->rowCount() == 0) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param $username
+     * @param $password
+     * insert user into db (without validation, as a regular user)
+     */
+    public function insertUser ($username, $password) {
+        $query = $this->link->prepare("INSERT INTO users (username, password, admin) VALUES (:username, :password, 0)");
+        $query->bindParam(":username", $username);
+        $query->bindParam(":password", password_hash($password, PASSWORD_DEFAULT));
+        $query->execute();
+    }
+
+    /**
+     * @param $user
+     * @return string
+     * returns hashed password
+     */
+    public function getPasswordHash ($user) {
+        $query = $this->link->prepare("SELECT * FROM `users` WHERE username = :username");
+        $query->bindParam(":username", $user);
+        $query->execute();
+        $result = $query->fetchAll(PDO::FETCH_ASSOC);
+        return $result[0]["password"];
+    }
+
+    /**
+     * @param $user
+     * @return bool
+     * returns bool - if the user is an admin or not
+     */
+    public function isAdmin ($user) {
+        $query = $this->link->prepare("SELECT * FROM `users` WHERE username = :username");
+        $query->bindParam(":username", $user);
+        $query->execute();
+        $result = $query->fetchAll(PDO::FETCH_ASSOC);
+        if ($result[0]["admin"] == 1) {
             return true;
         }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
         return false;
     }
 
     /**
      * @param $username
      * @param $password
-     * Vloží uživatele do db (sama o sobě ale data nekontroluje - validace probíhá v jiné části kódu).
-     */
-    public function insertUser ($username, $password) {
-        $query = "INSERT INTO users (username, password, admin) VALUE ('$username', '$password', 0)";
-        mysqli_query($this->getLink(), $query);
-    }
-
-    /**
-     * @param $user
-     * @return mixed
-     * Vrátí hash pro uživatele (validace, zda existuje, probíhá jinde!)
-     */
-    public function getPasswordHash ($user) {
-        $query = "SELECT password, BIN(`admin` + 0) AS `admin` FROM `users` WHERE username='$user'";
-        $result = mysqli_query($this->getLink(), $query);
-        $hash = mysqli_fetch_row($result)[0];
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $hash;
-    }
-
-    /**
-     * @param $user
-     * @return bool
-     * Vrátí, zda má uživatel administrátorská práva (nevaliduje!)
-     */
-    private function isAdmin ($user) {
-        $query = "SELECT admin, BIN(`admin` + 0) AS `admin` FROM `users` WHERE username='$user'";
-        $result = mysqli_query($this->getLink(), $query);
-        $admin = mysqli_fetch_row($result)[0];
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        if ($admin == 1) {
-            $ret = true;
-        }
-        else {
-            $ret = false;
-        }
-        return $ret;
-    }
-
-    /**
-     * @param $username
-     * @param $password
-     * @return void
-     * Validuje a přihlašuje uživatele.
+     * validate user and sign him in
      */
     public function signIn($username, $password) {
         if ($this->userExists($username)) {
@@ -112,18 +93,6 @@ class UserDatabase extends Database {
                 header("Location: $location");
             }
         }
-        return;
-    }
-
-    /**
-     * @param $user
-     * @param $new
-     * Funkce pro změnu hesla v databázi.
-     */
-    public function changePassword($user, $new) {
-        $query = "UPDATE users SET password = '$new' WHERE username=$user";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
     }
 }
 
@@ -131,7 +100,7 @@ class UserDatabase extends Database {
 /**
  * @param $username
  * @return bool
- * kontrola délky
+ * length check
  */
 function usernameValid($username) {
     if (strlen($username) < 3 || strlen($username) > 15) {
@@ -143,10 +112,10 @@ function usernameValid($username) {
 /**
  * @param $password
  * @return bool
- * kontrola délky
+ * length check
  */
 function passwordValid($password) {
-    if (strlen($password) < 5 || strlen($password) > 20) {
+    if (strlen($password) < 5) {
         return false;
     }
     return true;
@@ -162,7 +131,7 @@ function passwordsMatch($password, $match) {
 /**
  * @param $user
  * @param $admin
- * Nastavit session.
+ * set user session
  */
 function startUserSession($user, $admin) {
     $_SESSION["signed"] = true;
@@ -171,7 +140,7 @@ function startUserSession($user, $admin) {
 }
 
 /**
- * Odhlásit uživatele - zrušit nastavení session.
+ * sign out -- unset session
  */
 function signOut() {
     session_unset();
@@ -179,23 +148,23 @@ function signOut() {
 
 $db = new UserDatabase();
 
-/**
- * Validace a přihlášení
- * */
-
 $location = $_SERVER["PHP_SELF"];
 
+/**
+ * if a sign-in form is sent, try to sign the user in
+ */
 if (isset($_POST["username"])&&isset($_POST["password"])&&!isset($_SESSION["signed"])) {
     $db->signIn($_POST["username"], $_POST["password"]);
 }
 
 /**
- * Jestliže jsou odeslána data v registračním formuláři, proběhne validace.
+ * registration - validate data and register new user
  * */
 if (isset($_POST["reg_username"])&&isset($_POST["reg_password"])&&isset($_POST["reg_password_again"])&&!isset($_SESSION["signed"])) {
-    if (!$db->userExists(mysqli_real_escape_string($db->getLink(), $_POST["reg_username"]))&&usernameValid($_POST["reg_username"])&&passwordsMatch($_POST["reg_password"], $_POST["reg_password_again"])&&passwordValid($_POST["reg_password"])) {
+    if (!$db->userExists($_POST["reg_username"])&&usernameValid($_POST["reg_username"])&&passwordsMatch($_POST["reg_password"], $_POST["reg_password_again"])&&passwordValid($_POST["reg_password"])) {
         header("Location: $location");
-        $db->insertUser(mysqli_real_escape_string($db->getLink(), $_POST["reg_username"]), password_hash($_POST["reg_password"], PASSWORD_DEFAULT));
+        $db->insertUser($_POST["reg_username"], $_POST["reg_password"]);
+        startUserSession($_POST["reg_username"], false);
     }
 }
 
@@ -206,7 +175,6 @@ if (isset($_POST["signout"])) {
 
 /**
  * Class ArticleDatabase
- * Třída s metodami pro práci s články (a jejich zařazením do rubrik).
  */
 class ArticleDatabase extends Database {
 
@@ -214,25 +182,26 @@ class ArticleDatabase extends Database {
      * @param $title
      * @param $author
      * @param $contents
-     * Vkládání článků do db.
      */
     public function insertArticle ($title, $author, $contents) {
-        $currentTime = date("Y-m-d", time());
-        $query = "INSERT INTO articles (title, author, contents) VALUE ('$title', '$author', '$contents')";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $query = $this->link->prepare("INSERT INTO `articles` (`title`, `author`, `contents`) VALUES (:title, :author, :contents)");
+        $query->bindParam(":title", $title);
+        $query->bindParam(":author", $author);
+        $query->bindParam(":contents", $contents);
+        $query->execute();
     }
 
     /**
      * @param $id
      * @param $title
      * @param $contents
-     * AKtualizace existujícího článku podle identifikátoru.
      */
     public function updateArticle($id, $title, $contents) {
-        $query = "UPDATE articles SET title = '$title', contents = '$contents' WHERE id=$id";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $query = $this->link->prepare("UPDATE articles SET title = :title, contents = :contents WHERE id=:id");
+        $query->bindParam(":title", $title);
+        $query->bindParam(":contents", $contents);
+        $query->bindParam(":id", $id);
+        $query->execute();
     }
 
     /**
@@ -240,55 +209,40 @@ class ArticleDatabase extends Database {
      * Smazání čánku z db.
      */
     public function deleteArticle($id) {
-        $query = "DELETE FROM articles WHERE id=$id";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $this->link->query("DELETE FROM articles WHERE id=$id");
     }
 
     /**
      * @return array
-     * Vrátí array se všemi články.
      */
     public function getAllArticles() {
-        $articles = array();
-        $query = "SELECT * FROM `articles`";
-        $result = mysqli_query($this->getLink(), $query);
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($articles, $row);
-        }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $articles;
+        $stmt = $this->link->prepare("SELECT * FROM `articles`");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * @param $id
      * @return array|null
-     * Vrátí buďto null (když článek neexistuje), nebo array s podrobnostmi o článku.
      */
     public function getArticle ($id) {
         $id = intval($id);
         if ($this->articleExists($id)) {
-        $query = "SELECT * FROM `articles` WHERE id=$id";
-        $result = mysqli_query($this->getLink(), $query);
-        $article = mysqli_fetch_assoc($result);
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $article;
+            $query = $this->link->prepare("SELECT * FROM `articles` WHERE id=:id");
+            $query->bindParam(":id", $id);
+            $query->execute();
+            $article = $query->fetchAll(PDO::FETCH_ASSOC);
+            return $article[0];
     }
     return null;
     }
 
     /**
      * @return mixed
-     * Vrací id posledního přidaného článku.
      */
     public function getLatestArticleId () {
-        $query = "SELECT MAX(id) FROM `articles`";
-        $result = mysqli_query($this->getLink(), $query);
-        $latest = mysqli_fetch_row($result)[0];
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
+        $query = $this->link->query("SELECT MAX(id) FROM `articles`");
+        $latest = $query->fetchAll(PDO::FETCH_ASSOC)[0]["id"];
         return $latest;
     }
 
@@ -299,207 +253,158 @@ class ArticleDatabase extends Database {
      */
     public function articleExists ($article) {
         $article = intval($article);
-        $query = "SELECT * FROM `articles` WHERE id=$article";
-        $result = mysqli_query($this->getLink(), $query);
-        if (mysqli_num_rows($result) === 0) {
-            mysqli_free_result($result);
-            mysqli_close($this->getLink());
+        $query = $this->link->prepare("SELECT * FROM `articles` WHERE id=$article");
+        $query->execute();
+        if ($query->rowCount() == 0) {
             return false;
         }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
         return true;
     }
 
     /**
      * @param $id
      * @return array
-     * Vrátí array se všemi rubrikami, v nichž článek je zařazen,
      */
     public function getArticleCategories($id) {
         if ($this->articleExists($id)) {
-        $categories = array();
-        $query = "SELECT category FROM `cat_art` WHERE article=$id";
-        $result = mysqli_query($this->getLink(), $query);
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($categories, $row);
-        }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $categories;
+            $query = $this->link->prepare("SELECT category FROM `cat_art` WHERE article=$id");
+            $query->execute();
+            $result = $query->fetchAll(PDO::FETCH_ASSOC);
+        return $result;
     }
     }
 
     /**
      * @return array
-     * Vrací array se všemi rubrikami, které existují.
      */
     public function getAllCategories() {
-        $categories = array();
-        $query = "SELECT category FROM `categories`";
-        $result = mysqli_query($this->getLink(), $query);
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($categories, $row);
-        }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $categories;
+        $query = $this->link->prepare("SELECT category FROM `categories`");
+        $query->execute();
+        return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * @param $category
      * @return bool
-     * Kontrola, zda již kategorie existuje.
+
      */
     public function categoryExists ($category) {
-        $query = "SELECT category FROM `categories` WHERE category='$category'";
-        $result = mysqli_query($this->getLink(), $query);
-        if (mysqli_num_rows($result) === 0) {
-            mysqli_free_result($result);
-            mysqli_close($this->getLink());
+        $query = $this->link->prepare("SELECT category FROM `categories` WHERE category=:category");
+        $query->bindParam(":category", $category);
+        $query->execute();
+        if ($query->rowCount() === 0) {
             return false;
         }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
         return true;
     }
 
     /**
      * @param $category
-     * Přidání kategorie do tabulky categories
      */
     public function createCategory($category) {
-        $query = "INSERT INTO `categories` (category) VALUE ('$category')";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $query = $this->link->prepare("INSERT INTO `categories` (category) VALUE (:category)");
+        $query->bindParam(":category", $category);
+        $query->execute();
     }
 
     /**
      * @param $category
      * @param $article
-     * Přidání článku do tabulky cat_art (podle názvu rubriky + id článku).
      */
     public function addCategoryRelation ($category, $article) {
-        $query = "INSERT INTO cat_art (category, article) VALUE ('$category', $article)";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $query = $this->link->prepare("INSERT INTO cat_art (category, article) VALUE (:category, :article)");
+        $query->bindParam(":category", $category);
+        $query->bindParam(":article", $article);
+        $query->execute();
     }
 
     /**
      * @param $category
      * @param $article
      * @return bool
-     * Existuje relace mezi článkem a rubrikou?
      */
     public function relationExists($category, $article) {
-        $query = "SELECT * FROM `cat_art` WHERE category='$category' AND article=$article";
-        $result = mysqli_query($this->getLink(), $query);
 
-        if (mysqli_num_rows($result) === 0) {
-            mysqli_free_result($result);
-            mysqli_close($this->getLink());
+        $query = $this->link->prepare("SELECT * FROM `cat_art` WHERE category=:category AND article=:article");
+        $query->bindParam(":category", $category);
+        $query->bindParam(":article", $article);
+        $query->execute();
+        if ($query->rowCount() == 0) {
             return false;
         }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
         return true;
     }
 
     /**
      * @param $article
-     * Odstraní všechny relace článek (podle id) : rubrika.
      */
     public function resetArticleRelations($article) {
-        $query = "DELETE FROM cat_art WHERE article=$article";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $this->link->query("DELETE FROM cat_art WHERE article=$article");
     }
 
     /**
      * @param $category
      * @return bool
-     * Kontrola, zda je rubrika v relaci s nějakým článkem.
+ 
      */
     public function isCategoryToAny($category) {
-        $query = "SELECT * FROM `cat_art` WHERE category='$category'";
-        $result = mysqli_query($this->getLink(), $query);
-        if (mysqli_num_rows($result) === 0) {
-            mysqli_free_result($result);
-            mysqli_close($this->getLink());
+        $query = $this->link->prepare("SELECT * FROM `cat_art` WHERE category=:category");
+        $query->bindParam(":category", $category);
+        $query->execute();
+        if ($query->rowCount() == 0) {
             return false;
         }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
         return true;
     }
 
     /**
      * @param $category
-     * Smazání kategorie z tabulky categories.
      */
     public function deleteCategory($category) {
-        $query = "DELETE FROM categories WHERE category='$category'";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $query = $this->link->prepare("DELETE FROM `categories` WHERE `category` = :category");
+        $query->bindParam(":category", $category);
+        $query->execute();
     }
 
     /**
      * @param $category
      * @return array
-     * Výpis všech článků dané rubriky.
      */
     public function getArticlesByCategory ($category) {
-        $articles = array();
-        $query = "SELECT * FROM `cat_art` INNER JOIN articles ON articles.id=cat_art.article WHERE category='$category'";
-        $result = mysqli_query($this->getLink(), $query);
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($articles, $row);
-        }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $articles;
+        $query = $this->link->prepare("SELECT * FROM `cat_art` INNER JOIN articles ON articles.id=cat_art.article WHERE category=:category");
+        $query->bindParam(":category", $category);
+        $query->execute();
+        return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * @param $author
      * @return array
-     * Výpis všech článků daného autora.
      */
     public function getArticlesByAuthor ($author) {
-        $articles = array();
-        $query = "SELECT * FROM `articles` WHERE author='$author'";
-        $result = mysqli_query($this->getLink(), $query);
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($articles, $row);
-        }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $articles;
+        $query = $this->link->prepare("SELECT * FROM `articles` WHERE author=:author");
+        $query->bindParam(":author", $author);
+        $query->execute();
+        return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * @param $category
      * @param $author
      * @return array
-     * Výpis všech článků daného autora v dané rubrice.
      */
     public function getArticlesByCategoryAuthor ($category, $author) {
-        $articles = array();
-        $query = "SELECT * FROM `cat_art` INNER JOIN articles ON articles.id=cat_art.article WHERE category='$category' AND author='$author'";
-        $result = mysqli_query($this->getLink(), $query);
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($articles, $row);
-        }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $articles;
+        $query = $this->link->prepare("SELECT * FROM `cat_art` INNER JOIN articles ON articles.id=cat_art.article WHERE category=:category AND author=:author");
+        $query->bindParam(":author", $author);
+        $query->bindParam(":category", $category);
+        $query->execute();
+        return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
 /**
  * @param $title
  * @return bool
- * Podle počtu znaků určuje, zda je titulek vhodný.
  */
 function titleValid($title) {
     if ((strlen($title) > 0)&&(strlen($title) < 250)) {
@@ -511,7 +416,6 @@ function titleValid($title) {
 /**
  * @param $text
  * @return bool
- * Podle počtu znaků určuje, zda je článek vhodný.
  */
 function textValid($text) {
     if ((strlen($text) > 0)&&(strlen($text) < 8000)) {
@@ -533,12 +437,11 @@ function categoriesLengthCheck ($array) {
 
 /**
  * @param $article
- * Kontrola $_POST['category']:
- * 1. Pole vyčistit od "", které se posílají jako hodnota hidden pole (případně nevyplněného pole).
- * 2. Vymazat všechny existující vazby v tabulce cat_art
- * 3. Zkontrolovat kategorie - dříve neexistující přidat do tabulky categories - poté přidat vazbu.
- * 4. Zkontrolovat, zda neexistuje nějaká kategorie bez vazby a případně ji smazat z categories.
- *
+ * Check $_POST['category']:
+ * 1. Clean all blank categories ("") -- they are sent in hidden field in article form
+ * 2. Clean all existing relations in cat_art
+ * 3. Check all existing categories - if there is some that wasn't in db before, add it.
+ * 4. Check all categories in table categories - if there is any without any relation to article, delete it.  
  */
 
 function checkSubmittedArticleCategories ($article) {
@@ -550,22 +453,21 @@ function checkSubmittedArticleCategories ($article) {
     if (categoriesLengthCheck($_POST["category"])) {
     $articles->resetArticleRelations($article);
     foreach ($_POST["category"] as $category) {
-
         if (!$articles->categoryExists($category)) {
-            $articles->createCategory(mysqli_real_escape_string($articles->getLink(), $category));
+            $articles->createCategory($category);
         }
         $articles->addCategoryRelation($category, $article);
-        foreach ($articles->getAllCategories() as $value) {
-            if (!$articles->isCategoryToAny($value["category"])) {
-                $articles->deleteCategory($value["category"]);
-            }
     }
     }
+    foreach ($articles->getAllCategories() as $value) {
+        if (!$articles->isCategoryToAny($value["category"])) {
+            $articles->deleteCategory($value["category"]);
+        }
     }
 }
 
 /**
-*   Následující větvení kontroluje, zda jsou odeslána článková data na server. Jestlli ano (a jsou validní), ukládá do db. (update nebo nový článek)
+*   New article is sent -- validate and call function to add it to db if it's valid. 
 */
 if (isset($_POST["submit_article"])) {
     if (isset($_SESSION["admin"]) && $_SESSION["admin"]) {
@@ -573,12 +475,10 @@ if (isset($_POST["submit_article"])) {
             header("Location: $location");
             if (isset($_POST["a"]) && $articles->articleExists($_POST["a"])) {
                     checkSubmittedArticleCategories($_POST["a"]);
-                    $articles->updateArticle($_POST["a"], mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_title"]), mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_text"]));
+                    $articles->updateArticle($_POST["a"],  $_POST["edit_article_title"], $_POST["edit_article_text"]);
             } else {
-                $articles->insertArticle(mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_title"]), mysqli_real_escape_string($articles->getLink(), $_SESSION["user"]), mysqli_real_escape_string($articles->getLink(), $_POST["edit_article_text"]));
-                if (!checkSubmittedArticleCategories($articles->getLatestArticleId())) {
+                $articles->insertArticle($_POST["edit_article_title"], $_SESSION["user"], $_POST["edit_article_text"]);
                 checkSubmittedArticleCategories($articles->getLatestArticleId());
-                }
             }
         }
     }
@@ -586,7 +486,7 @@ if (isset($_POST["submit_article"])) {
 
 $comments = new CommentsDatabase();
 /**
- * Mazání článku v db.
+ * Delete article in db.
  * */
 if (isset($_POST["delete"])&&isset($_POST["a"])) {
     if (isset($_SESSION["admin"]) && $_SESSION["admin"]) {
@@ -604,76 +504,65 @@ if (isset($_POST["delete"])&&isset($_POST["a"])) {
 
 /**
  * Class CommentsDatabase
- * Databáze všech komentářů
  */
 class CommentsDatabase extends Database {
     /**
-     * @param $article -- k jakému článku je komentář určen (id)
+     * @param $article -- id of the article
      * @param $author
      * @param $text
      * Vložení komentáře.
      */
     public function insertComment ($article, $author, $text) {
-        $query = "INSERT INTO `comments` (article, author, text) VALUE ($article, '$author', '$text')";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $query = $this->link->prepare("INSERT INTO `comments` (article, author, text) VALUE (:article, :author, :text)");
+        $query->bindParam(":article", $article);
+        $query->bindParam(":author", $author);
+        $query->bindParam(":text", $text);
+        $query->execute();
     }
 
     /**
      * @param $article
      * @return array
-     * Vrátí array s komentáři k danému id článku.
+ 
      */
     public function getAllArticleComments($article) {
-        $comments = array();
-        $query = "SELECT * FROM `comments` WHERE article='$article'";
-        $result = mysqli_query($this->getLink(), $query);
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($comments, $row);
-        }
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $comments;
+        $query = $this->link->prepare("SELECT * FROM `comments` WHERE article=:article");
+        $query->bindParam(":article", $article);
+        $query->execute();
+        return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
      * @param $article
-     * Smaže všechny komentáře podle id článku.
      */
     public function deleteAllArticleComments($article) {
-        $query = "DELETE FROM comments WHERE article=$article";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $this->link->query("DELETE FROM comments WHERE article=$article");
+
     }
 
     /**
      * @param $id
-     * Smaže jeden komentář podle id.
      */
     public function deleteComment($id) {
-        $query = "DELETE FROM comments WHERE id=$id";
-        mysqli_query($this->getLink(), $query);
-        mysqli_close($this->getLink());
+        $this->link->query("DELETE FROM comments WHERE id=$id");
     }
 
     /**
      * @param $id
-     * @return mixed -- vrátí autora komentáře.
+     * @return string
      */
     public function getCommentAuthor($id) {
-        $query = "SELECT author FROM `comments` WHERE id=$id";
-        $result = mysqli_query($this->getLink(), $query);
-        $author = mysqli_fetch_row($result)[0];
-        mysqli_free_result($result);
-        mysqli_close($this->getLink());
-        return $author;
+        $query = $this->link->prepare("SELECT * FROM `comments` WHERE id=:id");
+        $query->bindParam(":id", $id);
+        $query->execute();
+        return $query->fetchAll(PDO::FETCH_ASSOC)[0]["author"];
     }
 }
 
 
 /**
  * @param $text
- * @return bool -- podle délky (0 nebo moc dlouhý není validní)
+ * @return bool
  */
 function commentValid($text) {
     if (strlen($text) > 0 && strlen($text) < 900) {
@@ -683,7 +572,7 @@ function commentValid($text) {
 }
 if (isset($_POST["submit_comment"])) {
     if (isset($_SESSION["user"])&&commentValid($_POST["comment_content"])) {
-        $comments->insertComment($_GET["p"], mysqli_real_escape_string($comments->getLink(), $_SESSION["user"]), mysqli_real_escape_string($comments->getLink(), $_POST["comment_content"]));
+        $comments->insertComment($_GET["p"], $_SESSION["user"],  $_POST["comment_content"]);
         header("Location: $location?p=".$_GET["p"]);
     }
 }
