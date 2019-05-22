@@ -1,5 +1,5 @@
 # Personal blog
-School project (semester B181 - Winter 2018/19, course B6B39ZWA - Zaklady webovych aplikaci @ FEE CVUT)
+School project (semester B181 - Winter 2018/19, course B6B39ZWA - Zaklady webovych aplikaci @ FEE CTU Prague)
 
 ## About this template
 Contains both server and client side of simple personal blog that allows adding new articles, reading them, commenting on them, ... Allows signing in and keeping signed in (sessions), setting design preferences (dark / light theme, number of articles per page) and keeping them (cookies). 
